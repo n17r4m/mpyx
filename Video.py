@@ -67,10 +67,13 @@ class Video:
     @staticmethod
     def getVideoReader(video):
         if isinstance(video, str):
+            return vread(video, verbosity=0), video
+            """
             if video.split(".")[-1] == "avi":
                 return pims.open(video), video
             else:
                 return vread(video), video
+            """
         else:
             return video.reader, video.file
  

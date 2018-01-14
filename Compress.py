@@ -51,7 +51,7 @@ class VideoFile(F):
     
     def setup(self, video_fpath, experiment_dir, fname, width=2336, height=1729, fps=300., rate=24.):
         
-        self.cmd = ''.join(('ffmpeg -i "{}"'.format(video_fpath),
+        cmd = ''.join(('ffmpeg -i "{}"'.format(video_fpath),
           ' -c:v libx264 -crf 15 -preset fast',
           ' -pix_fmt yuv420p',
           ' -filter:v "setpts={}*PTS'.format(fps/rate),
@@ -60,10 +60,10 @@ class VideoFile(F):
           ' -movflags +faststart',
           ' "{}"'.format(os.path.join(experiment_dir, fname))))
               
-        self.proc = sp.Popen(shlex.split(self.cmd), stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.STDOUT)
-        fcntl.fcntl(self.proc.stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
+        proc = sp.Popen(shlex.split(cmd), stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.STDOUT)
+        fcntl.fcntl(proc.stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
         
-        while self.proc.poll() is None:
+        while proc.poll() is None:
             try:
                 self.push(proc.stdout.read())
             except:

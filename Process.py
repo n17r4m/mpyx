@@ -546,7 +546,7 @@ class Iter(F):
     "A simple iterator that flows an input iterable into the process graph"
     def setup(self, iterable):
         for x in iterable:
-            self.push(x)
+            self.put(x)
         self.stop()
 
 
@@ -660,6 +660,7 @@ class EndSeq(F):
         self.pq.put((self.meta[self.key], (self.meta, item)))
         for _ in range(self.pq.qsize()): # todo: optimize
             p, data = self.pq.get()
+            
             if p == self.seq_id:
                 self.meta[self.key] = self.seq_id
                 self.meta, item = data
