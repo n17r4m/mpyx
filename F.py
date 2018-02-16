@@ -93,7 +93,7 @@ class F(Process):
     def put(self, item):
         "Emit some data"
         data = (self.meta.copy(), item)
-        [output.put(data) for output in self.outputs]
+        [output.put(data) for output in self.outputs if not isinstance(output, Indurate.ProxyQueue)]
         sched_yield()
     
     
@@ -355,23 +355,19 @@ class Indurate:
             sink.outputs.append(q)
             for src in ind.sources():
                 src.infrom.append(sink)
-        
         for fn in flatten(self.graph()):
             setattr(fn, attr, q)
         self.deps.append(ind)
+        return self
     
     def link(self, fns):
         
         self.mode = type(fns)
         
-        if isinstance(fns, (tuple, Parallel)):
-            return self.linkParallel(fns)
-        elif isinstance(fns, (set, Broadcast)):
-            return self.linkBroadcast(fns)
-        elif isinstance(fns, (list, Serial)):
-            return self.linkSerial(fns)
-        else:
-            raise ValueError("unknown link mode")
+        if    isinstance(fns, (tuple, Parallel)): return self.linkParallel(fns)
+        elif  isinstance(fns, (set, Broadcast)):  return self.linkBroadcast(fns)
+        elif  isinstance(fns, (list, Serial)):    return self.linkSerial(fns)
+        else: raise ValueError("unknown link mode")
     
     
     def linkSerial(self, fns):
@@ -628,7 +624,8 @@ def By(n, fn, *args, **kwargs):
 
 class Sink(F):
     def do(self, item):
-        pass
+        if len(self.outputs) > 0:
+            self.put(item)
 
 
 class Const(F):
