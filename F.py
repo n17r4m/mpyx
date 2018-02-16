@@ -3,6 +3,7 @@ F.py -- An experimental library of python multiprocessing.
 """
 
 from multiprocessing import Process, JoinableQueue, Event
+from multiprocessing import queues as MPQueues
 from queue import Empty, PriorityQueue
 
 import collections
@@ -36,6 +37,8 @@ sched_yield = LIBC.sched_yield
 class F(Process):
     "I am a Process with a few useful hooks, latches, and queue management."
     
+    Event = Event
+    Queue = JoinableQueue
     
     def initialize(self, *args, **kwargs):
         "Override me"
@@ -58,11 +61,18 @@ class F(Process):
     # =======
     
 
+    def myAsync(self, coroutine):
+        "Call and Excecute a async function"
+        if not hasattr(self, "event_loop"):
+            self.event_loop = asyncio.new_event_loop()
+        return self.event_loop.run_until_complete(coroutine())
+    
     def async(self, coroutine):
-        "Call a async function"
+        "Execute a async function"
         if not hasattr(self, "event_loop"):
             self.event_loop = asyncio.new_event_loop()
         return self.event_loop.run_until_complete(coroutine)
+    
     
     def sleep(self, n=0.001):
         "Pause for a moment"
@@ -134,9 +144,11 @@ class F(Process):
         self.outputs = []
         self.infrom = [] 
         
-        self.__done_event = Event()
-        self.__stop_event = Event()
-        self.__start_event = Event()
+        self.is_source = False
+        
+        self.__done_event = self.Event()
+        self.__stop_event = self.Event()
+        self.__start_event = self.Event()
     
     # [Lifecycle] initialize(self, *args, **kwargs)
     
@@ -220,6 +232,38 @@ class F(Process):
     def finished(self):
         return self.__done_event.is_set()
     
+    # Other helpers
+    # =============
+    
+    def daemonize(self):
+        self.daemon = True;
+        return self
+
+
+"""
+
+    def dep(self, dep = None):
+        if isinstance(dep, Indurate):
+            self.infrom.append(dep.fns[-1]) # Generally a Sink()
+        elif isinstance(dep, F):
+            self.infrom.append(dep)
+        else:
+            self.infrom.append(FakeSource())
+
+    def input(self):
+        q = self.Queue()
+        self.inputs.append(q)
+        return q
+
+    def output(self):
+        q = self.Queue()
+        self.outputs.append(q)
+        return q
+
+class FakeSource:
+    def finishedself):
+        return False
+"""
 
 
 
@@ -244,6 +288,7 @@ class Indurate:
         self.qsize = qsize
         self.watchdog = None
         
+        
         if callable(fns):
             name = fns.__name__
             fns = [Map(fns)]
@@ -256,7 +301,7 @@ class Indurate:
         self.outputs = [] if outputs is None else outputs
         
         self.fns = self.link(fns)
-        
+        self.deps = []
         
     
     
@@ -290,84 +335,30 @@ class Indurate:
             for fB in snap:
                 if len(list(set(fA.outputs) & set(fB.inputs))) > 0:
                     fB.infrom.append(fA)
-            
-    def wire(self, g, incoming = None):
-        # incoming is the parent,
-        # potentially deprecated in favor of self.brdep
-        '''
-        
-        def wire(self, g, inc): ...   
-        
-        if isinstance(g, (list, Serial)): # serial
-            # I don't know how to express this algo either.
-        
-            if g[0] is Fn
-                g[0].inc = inc
-                wire(g[1:], g[0])
-            else
-                wire(g[0], inc)
-        
-        if isinstance(g, (set, tuple, Parallel, Broadcast)):
-            for all i in g
-                if i is Fn
-                    i.inc = inc
-                else
-                    wire(g[0], inc)
-        '''
-        incoming = [] if incoming is None else incoming
-        
-        kind = type(g)
-        
-        if len(g) == 0:
-            return kind
-        else:
-            g = list(g) # this works because the linker does the i/o,
-                        # wire just creates the dependancy graph
-        
-        fn = g[0]
-        print("new call", 
-        fn, g, incoming)
-        
-        if isinstance(fn, (list, set, tuple)):
-            k = self.wire(fn, incoming)
-            print("datastructure", k)
-            if k in [set, tuple, Parallel, Broadcast]:
-                self.wire(g[1:], fn)
-            else: # Serial
-                self.wire(g[1:], [fn[-1]])
-                
-            
-        else:
-            print("FInstance", kind, g)
-            for e in self.endpoints(incoming):
-                if e not in fn.infrom:
-                    print("im", fn, "parent", e)
-                    fn.infrom.append(e)
-            
-            if isinstance(g, (list, set, tuple)):
-                print("G is list, set, tuple")
-                self.wire(g[1:], [fn])
-            else:
-                print("G is not")
-                self.wire(g[1:], incoming)
-        return kind
+        for fn in flatten(self.graph()):
+            if len(fn.infrom) == 0:
+                fn.is_source = True
+                    
+    def sinks(self):
+        return [fn for fn in flatten(self.graph()) if isinstance(fn, Sink)]
     
-    def endpoints(self, g):
-        ends = []
-        if len(g) > 0:
-            g = list(g) # this works because the linker does the i/o,
-                        # wire just creates the dependancy graph
-            
-            fn = g[0]
-            if isinstance(fn, (list, set, tuple)):
-                ends.extend(self.endpoints(fn[1:]))
-                ends.extend(self.endpoints(g[1:]))
-            else:
-                ends.append(fn)
-                ends.extend(self.endpoints(g[1:]))
-
+    def sources(self):
+        return [fn for fn in flatten(self.graph()) if fn.is_source]
+    
+    
+    def xcut(self, attr, ind):
+        # cross cut another induration into this one
+        q = Indurate.ProxyQueue(self.qsize)
+        for src in ind.sources():
+            src.inputs.append(q)
+        for sink in self.sinks():
+            sink.outputs.append(q)
+            for src in ind.sources():
+                src.infrom.append(sink)
         
-        return ends
+        for fn in flatten(self.graph()):
+            setattr(fn, attr, q)
+        self.deps.append(ind)
     
     def link(self, fns):
         
@@ -470,16 +461,31 @@ class Indurate:
 
 
     def start(self):
+        [dep.start() for dep in self.deps]
         [fn.start() for fn in self.fns]
         return self
     
     def watch(self, n = 5.):
+        [dep.watch() for dep in self.deps]
         self.watchdog = Indurate.WatchDog(self, n)
         self.watchdog.start()
         return self
     
+    def unwatch(self):
+        [dep.unwatch() for dep in self.deps]
+        self.watchdog.stop()
+        self.watchdog.join()
+        self.watchdog = None
+    
+    def daemonize(self):
+        [dep.daemonize() for dep in self.deps]
+        [fn.daemonize() for fn in self.fns]
+        return self
+    
     def join(self):
+        
         [fn.join() for fn in self.fns]
+        [dep.join() for dep in self.deps]
         
         if self.watchdog is not None:
             self.watchdog.stop()
@@ -487,6 +493,7 @@ class Indurate:
     
     def stop(self):
         [fn.stop() for fn in self.fns]
+        [dep.stop() for dep in self.deps]
         if self.watchdog is not None:
             self.watchdog.stop()
         return self
@@ -494,12 +501,13 @@ class Indurate:
     def stopped(self):
         return not any([not fn.stopped() for fn in self.fns])
     
+
     def items(self):
         # get items from workflow
         
-        sink_queues = self.fns[-1].inputs
-        self.fns[-1].inputs = []
-        del self.fns[-1]
+        sink_queues = flatten([sink.inputs for sink in self.sinks()])
+        for sink in self.sinks():
+            sink.inputs = []
         
         self.start()
         
@@ -525,18 +533,42 @@ class Indurate:
     
     def list(self):
         return list(self.items())
+    
 
     class WatchDog(F):
-        def setup(self, link, n = 5.):
+        def setup(self, link, n = 10.):
             import pprint
             while not self.stopped():
                 self.sleep(n/2.)
                 print(pprint.pformat(link.info(), indent=4, width=80, depth=10, compact=False))
                 self.sleep(n/2.)
-                
-                
-                
-                
+    
+    class ProxyQueue:
+        def __init__(self, qsize=16):
+            self.q = F.Queue(qsize)
+            
+        def get(self, *args, **kwArgs):
+            return {}, self.q.get( *args, **kwArgs)
+            
+        def get_nowait(self, *args, **kwArgs):
+            return {}, self.q.get_nowait( *args, **kwArgs)
+        
+        def put(self, item, *args, **kwArgs):
+            return self.q.put(item, *args, **kwArgs)
+            
+        def put_nowait(self, *args, **kwArgs):
+            return self.q.put_nowait(item, *args, **kwArgs)
+        
+        def qsize(self):              return self.q.qsize()
+        def empty(self):              return self.q.empty()
+        def full(self):               return self.q.full()
+        def close(self):              return self.q.close()
+        def join(self):               return self.q.join()
+        def task_done(self):          return self.q.task_done()
+        def join_thread(self):        return self.q.join_thread()
+        def cancel_join_thread(self): return self.q.cancel_join_thread()
+
+        
         
 class Serial(list):
     def __init__(self, *fns):
@@ -615,7 +647,7 @@ class Iter(F):
         for x in iterable:
             self.put(x)
         self.stop()
-    
+
 
 
 class Print(F):
@@ -631,6 +663,7 @@ class Stamp(F):
     "A simple debug tol to track items in the workflow"
     def setup(self, pre = "Processing item" ):
         self.count = 0
+        self.pre = pre
     def do(self, item):
         self.count += 1
         print(self.count) if self.pre is None else print(self.pre, self.count)
@@ -704,6 +737,7 @@ class SequenceStart(F):
         self.meta[self.key] = self.seq_id
         self.put(item)
         self.seq_id += 1
+        
 
 
 class SequenceEnd(F):
@@ -715,16 +749,17 @@ class SequenceEnd(F):
         
     def do(self, item):
         self.pq.put((self.meta[self.key], (self.meta, item)))
-        for _ in range(self.pq.qsize()): # todo: optimize
+        
+        for _ in range(self.pq.qsize()):
             p, data = self.pq.get()
-            
             if p == self.seq_id:
-                self.meta[self.key] = self.seq_id
                 self.meta, item = data
+                del self.meta[self.key]
                 self.put(item)
-                self.seq_id = self.seq_id + 1
+                self.seq_id += 1
             else:
                 self.pq.put((p, data))
+                break;
 
 
 class SequenceMerge(F):
