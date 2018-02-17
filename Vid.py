@@ -1,4 +1,4 @@
-from mpyx.F import F
+from mpyx import F
 
 import numpy as np
 import subprocess as sp
@@ -83,7 +83,7 @@ class FFmpeg(F):
         self.is_input_stream = input_url == '-'
         self.is_output_stream = output_url == '-'
         self.verbose = verbose
-        self.verbose = True
+        
     
     def setup(self, *init_args):
         if self.verbose:

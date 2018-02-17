@@ -2,7 +2,7 @@
 F.py -- An experimental library of python multiprocessing.
 """
 
-from multiprocessing import Process, JoinableQueue, Event
+from multiprocessing import Process, JoinableQueue, Event, Pipe
 from multiprocessing import queues as MPQueues
 from queue import Empty, PriorityQueue
 
@@ -37,8 +37,14 @@ sched_yield = LIBC.sched_yield
 class F(Process):
     "I am a Process with a few useful hooks, latches, and queue management."
     
+    # Aliases
     Event = Event
     Queue = JoinableQueue
+    Pipe  = Pipe
+    
+    
+    # Primary Lifecycle
+    # =================
     
     def initialize(self, *args, **kwargs):
         "Override me"
@@ -239,31 +245,6 @@ class F(Process):
         self.daemon = True;
         return self
 
-
-"""
-
-    def dep(self, dep = None):
-        if isinstance(dep, Indurate):
-            self.infrom.append(dep.fns[-1]) # Generally a Sink()
-        elif isinstance(dep, F):
-            self.infrom.append(dep)
-        else:
-            self.infrom.append(FakeSource())
-
-    def input(self):
-        q = self.Queue()
-        self.inputs.append(q)
-        return q
-
-    def output(self):
-        q = self.Queue()
-        self.outputs.append(q)
-        return q
-
-class FakeSource:
-    def finishedself):
-        return False
-"""
 
 
 
@@ -479,7 +460,7 @@ class Indurate:
         return self
     
     def join(self):
-        
+        [fn.start() for fn in self.fns]
         [fn.join() for fn in self.fns]
         [dep.join() for dep in self.deps]
         
@@ -602,69 +583,31 @@ def flatten(g):
         else:
             flattened.append(o)
     return flattened
-    
-"""
-def flatten(g):
-    ""https://stackoverflow.com/a/2158532/5357876""
-    for o in g:
-        if isinstance(o, collections.Iterable) and not isinstance(o, (str, bytes)):
-            yield from flatten(o)
-        else:
-            yield o
-"""
+
+
+# Parrallism wrappers
+# ===================
 
 def As(n, fn, *args, **kwargs):
     "Shortcut to parallize a function"
     return tuple(fn(*args, **kwargs) for _ in range(n))
+    
 
 def By(n, fn, *args, **kwargs):
     "Shortcut to broadcast a function"
     return {fn(*args, **kwargs) for _ in range(n)}
+    
 
+
+
+# A few core utility functions
+# ============================
 
 class Sink(F):
     def do(self, item):
         if len(self.outputs) > 0:
             self.put(item)
 
-
-class Const(F):
-    "Constant value generator"
-    def setup(self, item, limit = None):
-        count = 0
-        while count < (limit or float('inf')):
-            self.put(item)
-            count += 1
-        self.stop()
-
-
-class Iter(F):
-    "A simple iterator that flows an input iterable into the process graph"
-    def setup(self, iterable):
-        for x in iterable:
-            self.put(x)
-        self.stop()
-
-
-
-class Print(F):
-    "A simple iterator that flows an input iterable into the process graph"
-    def setup(self, pre = None):
-        self.pre = pre
-    def do(self, item):
-        print(item) if self.pre is None else print(self.pre, item)
-        self.put(item)
-
-
-class Stamp(F):
-    "A simple debug tol to track items in the workflow"
-    def setup(self, pre = "Processing item" ):
-        self.count = 0
-        self.pre = pre
-    def do(self, item):
-        self.count += 1
-        print(self.count) if self.pre is None else print(self.pre, self.count)
-        self.put(item)
 
 
 
@@ -678,50 +621,13 @@ class Map(F):
         self.put(self.fn(item, *self.args, **self.kwargs))
 
 
-class Filter(F):
-    "Filters input -> output by function"
-    def setup(self, fn, *args, **kwargs):
-        self.fn = fn
-        self.args = args
-        self.kwargs = kwargs
-    def do(self, item):
-        if self.fn(item, *self.args, **self.kwargs):
-            self.put(item)
-
-
-class Batch(F):
-    "Groups input into batches of 'size'"
-    def setup(self, size = 64):
-        self.batch = []
-        self.size = size
-        
-    def do(self, item):
-        self.batch.append(item)
-        if len(self.batch) >= self.size:
-            self.put(self.batch)
-            self.batch = []
-    
-    def teardown(self):
-        if len(self.batch) > 0:
-            self.put(self.batch)
-
-
 
 def Seq(*fns):
+    "Ensures input ordering matches output ordering"
     key = str(random.random())
     start = SequenceStart(key)
     end = SequenceEnd(key)
     return [start, *fns, end]
-
-
-def Zip(*fns):
-    if len(fns) == 1:
-        fns = fns[0]
-    key = str(random.random())
-    start = SequenceStart(key)
-    merge = SequenceMerge(key, len(fns))
-    
-    return [start, set(fns), merge]
 
 
 class SequenceStart(F):
@@ -757,63 +663,5 @@ class SequenceEnd(F):
             else:
                 self.pq.put((p, data))
                 break;
-
-
-class SequenceMerge(F):
-    "Merges inputs into rows by sequence id"
-    def setup(self, key = "seq", n = None):
-        self.pq = PriorityQueue() 
-        self.key = key
-        self.seq_id = 0
-        self.n = len(set(self._infrom)) if n is None else n
-        
-    def do(self, item):
-        
-        self.pq.put((self.meta[self.key], item))
-        
-        if self.pq.qsize() >= self.n:
-            for _ in range(self.pq.qsize()): # todo: optimize
-                if self.pq.qsize() >= self.n:
-                    keep = []
-                    back = []
-                    for i in range(self.n):
-                        p, item = self.pq.get()
-                        
-                        if p == self.seq_id:
-                            keep.append(item)
-                        else:
-                            back.append((p, item))
-                    
-                    if len(keep) == self.n:
-                        self.meta[self.key] = self.seq_id
-                        self.put(keep)
-                        self.seq_id += 1
-                    else:
-                        for item in keep:
-                            self.pq.put((self.seq_id, item))
-                            
-                    for data in back:
-                        self.pq.put(data)
-
-
-
-class Read(F):
-    def setup(self, filename, mode='r'):
-        with open(filename, mode) as file:
-            for data in file:
-                self.put(data)
-        self.stop()
-
-
-class Write(F):
-    def setup(self, filename, mode='w'):
-        self.file = open(filename, mode)
-    
-    def do(item):
-        self.file.write(item)
-        self.put(item)
-    
-    def teardown():
-        self.file.close()
 
 

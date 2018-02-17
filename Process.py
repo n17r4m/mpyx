@@ -1,5 +1,6 @@
 """
 Process.py -- An experimental library of python multiprocessing.
+### deprecated in favor of F.py ###
 """
 from queue import Empty, PriorityQueue
 import heapq
