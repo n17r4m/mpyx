@@ -1,4 +1,4 @@
-from mpyx.Process import F
+from mpyx.F import F
 
 import subprocess as sp
 import fcntl
@@ -8,7 +8,7 @@ import os
 
 class VideoStream(F):
     
-    def setup(self, experiment_dir, fname, width=2336, height=1729, fps=300., rate=24., pix_format="gray"):
+    def initialize(self, experiment_dir, fname, width=2336, height=1729, fps=300., rate=24., pix_format="gray"):
         print("Compress.py Notice: kevin changed do() to check for tuples... temporary?")
         self.cmd = ''.join(('ffmpeg',
           ' -f rawvideo -pix_fmt {}'.format(pix_format),
@@ -33,7 +33,7 @@ class VideoStream(F):
         except TypeError:
             self.proc.stdin.write(frame_bytes[1][1])
         try:
-            self.push(self.proc.stdout.read())
+            self.put(self.proc.stdout.read())
         except:
             pass
         
@@ -42,7 +42,7 @@ class VideoStream(F):
         self.proc.stdin.close()
         self.proc.wait()
         try:
-            self.push(self.proc.stdout.read())
+            self.put(self.proc.stdout.read())
         except:
             pass
     
@@ -65,6 +65,6 @@ class VideoFile(F):
         
         while proc.poll() is None:
             try:
-                self.push(proc.stdout.read())
+                self.put(proc.stdout.read())
             except:
                 time.sleep(1)

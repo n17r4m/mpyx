@@ -14,7 +14,6 @@ def arg_exists(arg, args):
     return any([a.find(arg) + 1 for a in args])
 
 
-
 class FFmpeg(F):
     # https://github.com/leandromoreira/ffmpeg-libav-tutorial#learn-ffmpeg-libav-the-hard-way
     # Do no use this. make a wrapper around skvideo instead. 
@@ -169,11 +168,6 @@ class FFmpeg(F):
                 time.sleep(0.1)
     
     
-            
-
-
-
-
 
 from collections import deque
 import math
@@ -242,7 +236,6 @@ class BG(F):
             self.que.append(frame)
             ends = list(self.que)[:math.ceil(len(self.que)/3)] + list(self.que)[math.floor(2*len(self.que)/3):]
             return np.mean(ends, axis=0).astype('uint8')
-    
     
     class max:
         
@@ -356,7 +349,6 @@ class BG(F):
             
             return frame * (1 - fgmask[:, :, np.newaxis])
     
-    
     class b2d:
         
         def __init__(self, window_size=15, img_shape=None):
@@ -382,3 +374,94 @@ class BG(F):
             
             return np.mean(self.que)
             
+    class simpleMax:
+        def __init__(self, window_size = 20, img_shape = None):
+            self.window_size = window_size
+            self.que = deque(maxlen=window_size)
+            self.bg = None
+        
+        def process(self, frame):
+            self.que.append(frame)
+            if self.bg is None:
+                self.bg = np.max(self.que, axis=0).astype('uint8')
+            return self.bg
+            
+class FG(F):
+    def setup(self, model = "division", *args, **kwargs):
+        # If your process needs to do any kind of setup once it has been forked,
+        # or if it the first process in a workflow and expected to generate 
+        # values for the rest of the pipeline, that code should go here.
+        self.model = getattr(self, model)()
+        
+    def do(self, item):
+        # The main workhorse of a process. Items will flow in here, potentially
+        # be modified, mapped, reduced, or otherwise morgified, and output can 
+        # be then pushed downstream using the self.put() method. 
+        # Here, for example, any items are simply passed along.
+        fg = self.model.process(item)
+        d = {'fg':fg, "frame": item["frame"]}
+        self.put(d)
+        
+    class division:
+        def __init__(self):
+            pass
+        
+        def process(self, item):
+            '''
+            Expects a dict with bg, frame
+            '''
+            div = item["frame"] / item["bg"]
+            return (255.0 * np.clip(div, 0, 1)).astype("uint8")
+
+
+from skimage.filters import threshold_sauvola
+from skimage.morphology import binary_opening, remove_small_objects, square
+from skimage.segmentation import clear_border
+
+class Binary(F):
+    def setup(self, model = "simple", *args, **kwargs):
+        # If your process needs to do any kind of setup once it has been forked,
+        # or if it the first process in a workflow and expected to generate 
+        # values for the rest of the pipeline, that code should go here.
+        self.model = getattr(self, model)(*args, **kwargs)
+        
+    def do(self, item):
+        # The main workhorse of a process. Items will flow in here, potentially
+        # be modified, mapped, reduced, or otherwise morgified, and output can 
+        # be then pushed downstream using the self.put() method. 
+        # Here, for example, any items are simply passed along.
+        self.put(self.model.process(item))
+        
+    class sauvola:
+        def __init__(self):
+            pass
+        
+        def process(self, frame):
+            maxVal = 1.0
+            threshold = threshold_sauvola(frame)
+            return (frame > threshold) * maxVal
+    
+    class simple:
+        def __init__(self, threshold=120):
+            self.threshold = threshold
+            pass
+        
+        def process(self, frame):
+            maxVal = 1.0
+            return (frame > self.threshold) * maxVal
+        
+    class legacyLabeled:
+        def __init__(self, threshold=120):
+            self.threshold = threshold
+            print("Notice: legacyLabeled removes 200 pixel border!")
+            pass
+        
+        def process(self, frame):
+            maxVal = 1.0
+            # Take the center, removing edge artifacts
+            frame = frame[200:-200,200:-200]
+            sframe = frame.squeeze()
+            binary = sframe < self.threshold
+            opened = binary_opening(binary, square(3))
+            cleared = clear_border(opened)
+            return cleared * maxVal

@@ -26,7 +26,7 @@ class Video:
 
         self.shape = (self.height, self.width, 1 if gray else self.channels)
         self.e = sys.float_info.min
-        
+        print("mpyx/Video.py"+" init called")
     
         
     def __len__(self):

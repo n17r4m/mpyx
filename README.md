@@ -16,7 +16,7 @@ as well as the limitations imposed by the GIL (Global Interpreter Lock).
 
 The aim of this library is to break free of this limitation and make it super
 easy to distribute nearly any workload across the full capabilities of your
-system. In practice, one, or even two full order of magnitude speed increase can
+system. In practice, one, or even two full orders of magnitude speed increase can
 often be achieved with minimal code modification.
 
 
@@ -32,7 +32,7 @@ also has ~~first class~~ support available in python starting with version 3.5.
 
 Ultimately, async code is still single-threaded, however by having multiple
 tasks sitting on an "event loop," when a particular task (such as reading a
-file, or fetching resource from the internet) is blocked while performing IO,
+file, or fetching a resource from the internet) is blocked while performing IO,
 other tasks may continue to run uninturrupted.
 
 ### Threads
@@ -60,7 +60,7 @@ about ensuring memory safety, however care must still be taken when accessing
 other shared resources, such as files or databases.
 
 Typical multiprocessing in python requires a rather large amount of boilerplate
-code. Although to be fair, it is still relatively straightforward:
+code. To be fair, it is still relatively straightforward:
 
 ```python
 import multiprocessing as mp
@@ -96,8 +96,7 @@ Worker: 4
 
 For a single long running task, this built in API is often sufficient, however
 it very quickly becomes difficult and unwieldy to orchestrate complex 
-workflows, especially if there are several bottleneck points interleved
-with an otherwise serial task flow.
+workflows.
 
 
 Introducing mpyx
@@ -180,7 +179,7 @@ from mpyx import S, P, B # abbreviated aliases.
 ```
 
 Continuing with the image processing example, to add real parallelism
-to the resize step, and some  the `EZ` statement could be rewritten as:
+to the resize step, the `EZ` statement could be rewritten as:
 
 ```python
 EZ( 
@@ -194,7 +193,7 @@ EZ(
 ```
 
 This will spawn a total of 17 processes and should give a huge speedup 
-on the resize step, even though each image still takes a full second to roll 
+on the resize step, even though each image will still take a full second to roll 
 through this hypothetical processing pipeline. 
 
 Tuning the amount of parallelism at each step is a bit of an art, and
@@ -251,7 +250,7 @@ Most complicated tasks will benifit from being declared as a subclass of `F`,
 however as mentioned previously, if your task is a simple mapping of 
 `foo(x) -> y`, you may use `foo` as a function in its vanilla state. 
 
-An important gotchya is that `F` derived classes must be instatiated for use
+An important gotchya is that `F` derived classes must be instantiated for use
 within an `EZ` processing pipeline. This is to allow parameters to be set 
 before the child process is forked.
 
@@ -307,7 +306,7 @@ folder.
 
 Instances of `F` provide a special member property `meta` which is a `dict`
 that will propogate through the `EZ` pipeline and are distinctly attached to a 
-specific item. This is very useful to attach ancillary information as required. 
+specific item. This is very useful when attaching ancillary information as required. 
 Here are some potential concrete implementations of `ImgFiles` and `SaveTo` 
 using `meta` to pass along the image filename:
 
@@ -600,7 +599,7 @@ a concrete list of results.
 ##### e.watch()
 
 Starts a watchdog process that prints to stdout the current queue sizes. Useful 
-for determining bottlenecks are located (and where you should add more parralelism :)
+for determining where bottlenecks are located (and where you should add more parralelism :)
 
 ##### e.unwatch()
 
@@ -612,7 +611,7 @@ Return a nested interpretation of the current computation graph.
 
 ##### e.printLayout()
 
-PrettyPrints the current computational graph. [TODO: Document format]
+Pretty Prints the current computational graph. [TODO: Document format]
 
 ##### e.daemonize()
 
