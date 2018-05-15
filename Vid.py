@@ -175,15 +175,15 @@ import math
 class BG(F):
     
     def setup(self, model = "median", window_size = 20, *args, env=None, **kwArgs):
-
         self.que = deque(maxlen=math.ceil(window_size / 2))
         self.model = getattr(self, model)(window_size=window_size, *args, **kwArgs)
         
     def do(self, frame):
-        
+        # import cv2
+        # from uuid import uuid4
         self.que.append((self.meta, frame))
         self.bg = self.model.process(frame)
-        
+        # cv2.imwrite('/home/mot/tmp/bg_'+str(uuid4())+'.png', self.bg)
         
         if isinstance(self.model, (self.mog, self.knn)):
             self.put({"frame": frame, "bg": self.bg})
@@ -245,6 +245,18 @@ class BG(F):
         def process(self, frame):
             self.que.append(frame)
             return np.max(self.que, axis=0).astype('uint8')
+    
+    class heur_max:
+        '''
+        Like 'max', but we suppress areas below a certain threshold
+        morphology minimum expands the suppressed regions,
+        - investigate the side-effects to non-suppressed regions
+        '''
+        def __init__(self, window_size = 20, img_shape = None):
+            self.que = deque(maxlen=window_size)
+        
+        def process(self, frame):
+            pass
     
     class splitmax:
         
@@ -376,14 +388,32 @@ class BG(F):
             
     class simpleMax:
         def __init__(self, window_size = 20, img_shape = None):
-            self.window_size = window_size
+            # print("simpleMax maxlen: "+str(math.ceil(window_size / 2)-5))
+            self.window_size = math.ceil(window_size / 2)
             self.que = deque(maxlen=window_size)
             self.bg = None
         
         def process(self, frame):
+            # like erosion, but faster
+            from skimage.filters.rank import minimum
+            # parameter: minimum lighting (dynamic range), threshold below
+            min_range = 20
             self.que.append(frame)
-            if self.bg is None:
-                self.bg = np.max(self.que, axis=0).astype('uint8')
+            # print("Model que len "+str(len(self.que))+" awaiting "+str(self.window_size))
+            if len(self.que) == self.window_size:
+                # print("computing bg...")
+                if self.bg is None:
+                    bg = np.max(self.que, axis=0)
+                    bg[bg<min_range] = 0
+                    bg = minimum(bg.squeeze(), square(8))
+                    bg = np.expand_dims(bg, axis=-1)
+                    self.bg = bg.astype('uint8')
+                    # print("bg computed...")
+                    import cv2
+                    cv2.imwrite("/home/mot/tmp/bg.png", self.bg)
+            else:
+                pass
+                # print("Awaiting more frames...")
             return self.bg
             
 class FG(F):
@@ -410,12 +440,13 @@ class FG(F):
             '''
             Expects a dict with bg, frame
             '''
-            div = item["frame"] / item["bg"]
+            div = item["frame"] / (item["bg"] + 0.0001)
+            div[np.isnan(div)] = 1.0 # get rid of nan's from 0/0
             return (255.0 * np.clip(div, 0, 1)).astype("uint8")
 
 
 from skimage.filters import threshold_sauvola
-from skimage.morphology import binary_opening, remove_small_objects, square
+from skimage.morphology import binary_opening, remove_small_objects, square, erosion
 from skimage.segmentation import clear_border
 
 class Binary(F):

@@ -19,9 +19,12 @@ import os
 # A few fancy tricks...
 
 from setproctitle import setproctitle
-import ctypes
-LIBC = ctypes.CDLL('libc.so.6')
-sched_yield = LIBC.sched_yield
+#import ctypes
+#LIBC = ctypes.CDLL('libc.so.6')
+#sched_yield = LIBC.sched_yield
+
+def sched_yield():
+    pass
 
 # def sched_yield():
 #     time.sleep(0)
@@ -145,6 +148,7 @@ class F(Process):
         self.env = kwargs.get('env', {})
         self.args = args
         self.kwargs = kwargs
+        
         
         self.inputs = []
         self.outputs = []
