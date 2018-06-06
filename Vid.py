@@ -17,9 +17,8 @@ def arg_exists(arg, args):
 
 class FFmpeg(F):
     # https://github.com/leandromoreira/ffmpeg-libav-tutorial#learn-ffmpeg-libav-the-hard-way
-    # Do no use this. make a wrapper around skvideo instead.
-    # or, calculate correct framesize in bytes to perform correctly aligned reads,
-    #
+    # may need to calculate correct framesize in bytes to perform correctly aligned reads on raw video
+
     def initialize(
         self,
         input_url="-",
