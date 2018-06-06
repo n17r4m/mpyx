@@ -79,6 +79,12 @@ class F(Process):
             self.event_loop = asyncio.new_event_loop()
         return self.event_loop.run_until_complete(coroutine)
 
+    def async2(self, coroutine):
+        "Execute a async function (when already in an event loop)"
+        if not hasattr(self, "event_loop"):
+            self.event_loop = asyncio.get_event_loop()
+        pass
+
     def sleep(self, n=0.001):
         "Pause for a moment"
         time.sleep(n)
@@ -96,12 +102,14 @@ class F(Process):
     def furcator(self, data):
         meta = data[0]
         item = data[1]
-        if isinstance(item, Datagram):
+        if isinstance(item, Data):
             item = item.furcate()
         return (meta, item)
 
     def put(self, item):
         "Emit some data"
+        self.accounting_finish()
+
         data = (self.meta.copy(), item)
 
         first = True
@@ -111,7 +119,7 @@ class F(Process):
                     output.put(data)
                     first = False
                 else:
-                    output.put(furcator(data))
+                    output.put(self.furcator(data))
 
         sched_yield()
 
@@ -142,6 +150,18 @@ class F(Process):
         else:
             self.meta, item = data
             return item
+
+    # Accounting
+    # ==========
+
+    def accounting_begin(self):
+        self.accounting_start_time = time.time()
+
+    def accounting_finish(self):
+        if not "timings" in self.meta:
+            self.meta["timings"] = {}
+        if hasattr(self, "accounting_start_time"):
+            self.meta["timings"][self.name] = time.time() - self.accounting_start_time
 
     # Lifecycle
     # =========
@@ -193,7 +213,11 @@ class F(Process):
     def run(self):
         setproctitle("python {}".format(self.name))
         self.meta = {}
-        self.setup(*self.args, **self.kwargs)
+        try:
+            self.setup(*self.args, **self.kwargs)
+        except Exception as e:
+            self.handle_exception(e)
+
         while True:
 
             if self.stopped():
@@ -206,7 +230,11 @@ class F(Process):
                     if item is None:
                         pass
                     else:
-                        self.do(item)
+                        self.accounting_begin()
+                        try:
+                            self.do(item)
+                        except Exception as e:
+                            self.handle_exception(e)
 
                 except Exception as error:
                     traceback.print_exc()
@@ -217,6 +245,9 @@ class F(Process):
                 self.stop()
 
             sched_yield()
+
+    def handle_exception(self, e):
+        self.exception_handler.put((e, traceback.format_tb(e.__traceback__)))
 
     def started(self):
         return self.__start_event.is_set()
@@ -234,7 +265,11 @@ class F(Process):
         return self
 
     def shutdown(self):
-        self.teardown()
+        try:
+            self.teardown()
+        except Exception as e:
+            self.handle_exception(e)
+
         [q.join() for q in self.outputs]
         self.__done_event.set()
 
@@ -270,7 +305,9 @@ class Indurate:
     def __init__(self, fns, qsize=16, inputs=None, outputs=None):
 
         self.qsize = qsize
+
         self.watchdog = None
+        self.catch_added = False
 
         if callable(fns):
             name = fns.__name__
@@ -437,6 +474,9 @@ class Indurate:
                 )
 
     def start(self):
+        if not self.catch_added:
+            self.catch()
+
         [dep.start() for dep in self.deps]
         [fn.start() for fn in self.fns]
         return self
@@ -458,13 +498,59 @@ class Indurate:
         [fn.daemonize() for fn in self.fns]
         return self
 
+    def set_catch_added(self):
+        self.catch_added = True
+        [dep.set_catch_added() for dep in self.deps]
+
+    def catch(self, handler=None):
+
+        if not self.catch_added:
+            exception_queue = F.Queue()
+
+            class ChildHandler(F):
+
+                def do(self, exception):
+                    exception_queue.put(exception)
+
+            self.xcut("exception_handler", EZ(ChildHandler()))
+
+            import threading
+
+            def parentHandler(this):
+                while not this.stopped():
+                    try:
+                        e, tb = exception_queue.get(True, 1)
+                    except Empty:
+                        continue
+                    else:
+                        this.stop()
+                        if handler:
+                            handler(e, tb)
+                        else:
+
+                            print(
+                                "".join(
+                                    traceback.format_exception(
+                                        etype=type(e), value=e, tb=e.__traceback__
+                                    )
+                                    + tb
+                                )
+                            )
+
+            self.exception_thread = threading.Thread(target=parentHandler, args=[self])
+            self.exception_thread.start()
+            self.set_catch_added()
+
+        return self
+
     def join(self):
-        [fn.start() for fn in self.fns]
+        self.start()
         [fn.join() for fn in self.fns]
         [dep.join() for dep in self.deps]
 
         if self.watchdog is not None:
             self.watchdog.stop()
+
         return self
 
     def stop(self):
@@ -699,66 +785,46 @@ class SequenceEnd(F):
 # ====================================
 
 
-class Datagram:
+class Data:
 
-    def __init__(self, *args, **kwArgs):
+    def save_gen_fname(self, key):
+        return "/tmp/mpyx_datagram_{}_{}.npy".format(key, str(uuid4()))
 
-        self.__dict__["__initialized"] = False
-        self.__dict__["__data"] = {}
+    def save(self, key, data):
 
-        self.initialize(*args, **kwArgs)
+        if not hasattr(self, "np_file_store"):
+            # potential todo: https://stackoverflow.com/questions/394770/override-a-method-at-instance-level?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
+            # rewrite this instance's save function to skip this check in the future.
+            self.np_file_store = {}
 
-        self.__dict__["__initialized"] = True
-
-    def initialize(self):
-        # ovverride me
-        pass
-
-    def __setattr__(self, prop, data):
-
-        if self.__dict__["__initialized"]:
-
-            fname = "/tmp/mpyx_datagram_" + str(uuid4()) + ".npy"
-            np.save(fname, data)
-            mmap = data.dtype.hasobject == False
-            self.__dict__["__data"][prop] = {"mmap": mmap, "fname": fname}
-
+        if key in self.np_file_store:
+            fname = self.np_file_store[key]
         else:
-            self.__dict__[prop] = data
+            fname = self.save_gen_fname(key)
+        np.save(fname, data)
+        self.np_file_store[key] = fname
 
-    def __getattr__(self, prop):
-
+    def load(self, key):
         try:
-            value = self.__dict__["__data"][prop]
-        except:
-            try:
-                value = self.__dict__[prop]
-            except:
-                raise AttributeError(
-                    "'{}' object has no attribute '{}'".format(
-                        self.__class__.__name__, prop
-                    )
-                )
-            else:
-                return value
-        else:
-            if value["mmap"]:
-                try:
-                    return np.load(value["fname"], "r")
-                except Exception as e:
-                    return np.load(value["fname"])
-            else:
-                return np.load(value["fname"])
+            return np.load(self.np_file_store[key], "r")
+        except ValueError as e:
+            return np.load(self.np_file_store[key])
 
     def furcate(self):
-
-        fd = FrameData(self.experiment_uuid, self.segment_uuid, self.number)
-        for key, value in enumerate(self.__dict__["__data"]):
-            new_fname = "/tmp/mpyx_datagram_-" + str(uuid4()) + ".npy"
-            os.link(value["fname"], new_fname)
-            fd.data[key] = {mmap: value["mmap"], "fname": new_fname}
-        return fd
+        clone = pickle.loads(pickle.dumps(self))
+        if hasattr(clone, "np_file_store"):
+            for key, fname in clone.np_file_store.items():
+                new_fname = self.save_gen_fname(key)
+                os.link(fname, new_fname)
+                clone.np_file_store[key] = new_fname
+        return clone
 
     def clean(self):
-        for k, v in self.__dict__["__data"].items():
-            os.remove(v["fname"])
+        if hasattr(self, "np_file_store"):
+            for key, fname in self.np_file_store.items():
+                os.remove(fname)
+
+    def erase(self, prop):
+        if hasattr(self, "np_file_store"):
+            fname = self.np_file_store.pop(prop)
+            os.remove(fname)

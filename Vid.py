@@ -28,7 +28,9 @@ class FFmpeg(F):
         output_opts=[],
         global_opts=[],
         verbose=False,
+        datagram=None,
     ):
+
         if isinstance(input_opts, str):
             input_opts = [input_opts]
         if isinstance(output_opts, str):
@@ -90,6 +92,7 @@ class FFmpeg(F):
         self.is_input_stream = input_url == "-"
         self.is_output_stream = output_url == "-"
         self.verbose = verbose
+        self.datagram = datagram
 
     def setup(self, *init_args):
         if self.verbose:
@@ -116,6 +119,10 @@ class FFmpeg(F):
                     frame = np.fromstring(frame_bytes, dtype="uint8").reshape(
                         self.output_shape
                     )
+                    if self.datagram is not None:
+                        buf = self.datagram()
+                        buf.save("raw", frame)
+                        frame = buf
                     self.put(frame)
 
                 err = self.proc.stderr.read()
@@ -150,7 +157,7 @@ class FFmpeg(F):
             pass
 
     def teardown(self):
-        print("FFmpeg Teardown")
+        # print("FFmpeg Teardown")
         while self.proc.poll() is None:
 
             if self.is_input_stream:
@@ -507,9 +514,8 @@ class Binary(F):
             pass
 
         def process(self, frame):
-            maxVal = 1.0
             threshold = threshold_sauvola(frame)
-            return (frame > threshold) * maxVal
+            return frame > threshold
 
     class simple:
 
@@ -518,22 +524,18 @@ class Binary(F):
             pass
 
         def process(self, frame):
-            maxVal = 1.0
-            return (frame > self.threshold) * maxVal
+            return frame > self.threshold
 
     class legacyLabeled:
 
         def __init__(self, threshold=120):
             self.threshold = threshold
-            print("Notice: legacyLabeled removes 200 pixel border!")
-            pass
 
         def process(self, frame):
-            maxVal = 1.0
             # Take the center, removing edge artifacts
-            frame = frame[200:-200, 200:-200]
+            # frame = frame[200:-200, 200:-200]
             sframe = frame.squeeze()
             binary = sframe < self.threshold
             opened = binary_opening(binary, square(3))
             cleared = clear_border(opened)
-            return cleared * maxVal
+            return cleared
