@@ -21,23 +21,23 @@ often be achieved with minimal code modification.
 
 ### Table of Contents
 
-- [Background](#Background)
-- [Introducing mpyx](#Introducing mpyx)
-  * [EZ](#EZ)
-  * [F](#F)
-- [Cross Cutting Concerns](#Cross Cutting Concerns) 
-  * [.meta](#.meta)
-  * [.xcut](#.xcut)
-  * [.catch](#.catch)
-  * [Manual Wiring](#Manual Wiring)
-- [As and By](#As and By)
-- [Built in Wrappers](#Built in Wrappers)
-- [API Reference][#API Reference]
-  * [F](#F-1)
-  * [EZ / Indurate](#EZ / Indurate)
-- [Internals](#Internals)
-  * [EZ Wiring](#EZ Wiring)
-  * [F Lifecycle](#F Lifecycle)
+- [Background](#background)
+- [Introducing mpyx](#introducing-mpyx)
+  * [EZ](#ez)
+  * [F](#f)
+- [Cross Cutting Concerns](#cross-cutting-concerns)
+  * [.meta](#meta)
+  * [.xcut](#xcut)
+  * [.catch](#catch)
+  * [Manual Wiring](#manual-wiring)
+- [As and By](#as-and-by)
+- [Built in Wrappers](#built-in-wrappers)
+- [API Reference][#api-reference]
+  * [F](#f-1)
+  * [EZ / Indurate](#ez-indurate)
+- [Internals](#internals)
+  * [EZ Wiring](#ez-wiring)
+  * [F Lifecycle](#f-lifecycle)
 
 Background
 ----------
