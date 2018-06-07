@@ -641,7 +641,7 @@ EZ(Data(), {MaybeLog("logdir"),
 
 ```
 
-#### API Reference
+#### Available Methods
 
 ##### e.start()
 
