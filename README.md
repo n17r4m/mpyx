@@ -34,7 +34,7 @@ often be achieved with minimal code modification.
 - [Built in Wrappers](#built-in-wrappers)
 - [API Reference](#api-reference)
   * [F](#f-1)
-  * [EZ / Indurate](#ez-indurate)
+  * [EZ / Indurate](#ez--indurate)
 - [Internals](#internals)
   * [EZ Wiring](#ez-wiring)
   * [F Lifecycle](#f-lifecycle)
