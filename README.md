@@ -418,7 +418,7 @@ def do_work():
     EZ(Task1(), Task2(), Task3()).catch(err_handler).join()
 
 do_work()
-
+```
 
 ### Manual wiring
 
