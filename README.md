@@ -32,7 +32,7 @@ often be achieved with minimal code modification.
   * [Manual Wiring](#manual-wiring)
 - [As and By](#as-and-by)
 - [Built in Wrappers](#built-in-wrappers)
-- [API Reference][#api-reference]
+- [API Reference](#api-reference)
   * [F](#f-1)
   * [EZ / Indurate](#ez-indurate)
 - [Internals](#internals)
