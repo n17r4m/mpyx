@@ -221,7 +221,7 @@ class YourTask(F):
 
     def initialize(self, *args, **kwargs):
         # This is executed very early on while still in the parent's process
-        # context. Usually you won;t need to override this method, but can be
+        # context. Usually you won't need to override this method, but can be
         # useful to perform some kinds of early configuration that cannot
         # be accomplished once this process is forked into a child.
         pass
@@ -333,7 +333,9 @@ class SaveTo(F):
 
 Note: Any modifications to `meta` must be done before `put` is called.
 
-### .xcut
+### .xcut()
+
+`EZ(...).xcut("attr_name", EZ(...))`
 
 Sometimes a cross cutting concern requires actions to be performed at various
 places within a pipeline that demand a shared context. Common instances of this
@@ -381,6 +383,42 @@ EZ(SomeDataSource(), Ex_Task1(), Ex_Task2()).xcut('db', EZ(DBWriter())).start()
 
 ```
 
+### .catch()
+
+`def handler(exception, traceback)`
+
+`EZ(...).catch(handler)`
+
+
+By default, when an exception occurs in a child process, it will signal to
+all running processes in the processing pipeline to stop and cleanly exit.
+By appending a `.catch()` you can define your own error handling infrastructure.
+E.g. to recover and or restart processing as required.
+
+To use this you must define your error handling function:
+
+```python
+
+import traceback
+def err_handler(e, tb):
+    # e is the exception
+    # tb is the corresponding traceback, as a list.
+    print(
+        "".join(
+            traceback.format_exception(
+                etype=type(e), value=e, tb=e.__traceback__
+            )
+            + tb
+        )
+    )
+    print("Restarting...")
+    do_work()
+
+def do_work():
+    EZ(Task1(), Task2(), Task3()).catch(err_handler).join()
+
+do_work()
+
 
 ### Manual wiring
 
@@ -401,6 +439,10 @@ For convinience, the following shortcuts are available on the F class object:
 
 As and By
 ---------
+
+`EZ(As(4, Task, arg1, arg2, ...))`
+
+`EZ(By(4, Task, arg1, arg2, ...))`
 
 For easy instantiation of many parallel processes two auxilery functions 
 are provided by mpyx. `As` will instantiate several instances of a subclass
@@ -469,12 +511,24 @@ In addition, there are some work-in-progress extensions that you may find useful
 
 ```python
 
-from mpyx.Vid import FFmpeg
+from mpyx.Video import FFmpeg
 
 FFmpeg(input, input_opts, output, output_opts, global_opts, verbose=False)
 "Opens ffmpeg for reading/writing or streaming."
 "If a shape (e.g. (800, 600, 3) )" is provided for input and/or output,"
 "then it will stream through pipes, otherwise it will read/write to file."
+
+
+#Example
+
+EZ(
+    FFmpeg("somefile.avi", "", (1920, 1080, 3), "", "", False),
+    As(4, ProcessVidFrame),
+    Displayer()
+).start()
+
+
+
 
 ```
 
