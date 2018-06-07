@@ -552,7 +552,7 @@ EZ(
 ```
 
 
-API Refrence
+API Reference
 ------------
 
 
