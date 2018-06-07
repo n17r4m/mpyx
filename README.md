@@ -19,6 +19,25 @@ easy to distribute nearly any workload across the full capabilities of your
 system. In practice, one, or even two full orders of magnitude speed increase can
 often be achieved with minimal code modification.
 
+### Table of Contents
+
+- [Background](#Background)
+- [Introducing mpyx](#Introducing mpyx)
+  * [EZ](#EZ)
+  * [F](#F)
+- [Cross Cutting Concerns](#Cross Cutting Concerns) 
+  * [.meta](#.meta)
+  * [.xcut](#.xcut)
+  * [.catch](#.catch)
+  * [Manual Wiring](#Manual Wiring)
+- [As and By](#As and By)
+- [Built in Wrappers](#Built in Wrappers)
+- [API Reference][#API Reference]
+  * [F](#F-1)
+  * [EZ / Indurate](#EZ / Indurate)
+- [Internals](#Internals)
+  * [EZ Wiring](#EZ Wiring)
+  * [F Lifecycle](#F Lifecycle)
 
 Background
 ----------
