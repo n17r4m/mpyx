@@ -9,8 +9,6 @@ The number of CPU cores in modern computers is increasing at a substantial rate.
 For example, a high end server or workstation may now have up to 64 physical cores,
 or up to 128 available threads!
 
-See: https://www.amd.com/en/products/epyc-7000-series-2-socket-models
-
 Unfortunately python is intrinsically limited by its single threaded design,
 as well as the limitations imposed by the GIL (Global Interpreter Lock). 
 
@@ -168,8 +166,11 @@ EZ(
 `ImgFiles` and `SaveTo` are subclass instances of `F` which are explored
 more later, but the meat of this example is that each function, `imread`, 
 `resize`, `enhance`, `watermark`, are all operating in parallel now. 
-Assuming each step takes about the same amount of CPU time, **this alone will 
-give you a 5x speedup!**
+
+A good analogy is to consider the difference between a single person running 
+back and forth between a pond and a fire with a bucket, and 20 people forming
+a bucket brigade, passing buckets along between the pond and the fire.
+
 
 ### EZ
 
