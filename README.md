@@ -32,6 +32,9 @@ often be achieved with minimal code modification.
   * [Manual Wiring](#manual-wiring)
 - [As and By](#as-and-by)
 - [Built in Wrappers](#built-in-wrappers)
+  * [Common Operations](#common-operations)
+  * [Data](#data)
+  * [Video](#video)
 - [API Reference](#api-reference)
   * [F](#f-1)
   * [EZ / Indurate](#ez--indurate)
@@ -117,6 +120,8 @@ For a single long running task, this built in API is often sufficient, however
 it very quickly becomes difficult and unwieldy to orchestrate complex 
 workflows.
 
+k10temp-pci-00c3
+Adapter: PCI adapter
 
 Introducing mpyx
 ----------------
@@ -173,7 +178,9 @@ meaning to strengthen, or harden, or make firm). The details of `Indurate` are
 relatively unimportant, but what it does at a high level is set up a sequence
 of `multiprocessing.JoinableQueue` between each part of your workflow.
 
-There is a caveat however; suppose that most of the above image processing task 
+There is a caveat however; suppose that most of the above image processingk10temp-pci-00c3
+Adapter: PCI adapter
+ task 
 is very quick, but resizing the image takes much longer than the other parts. 
 As they say, a chain is only as strong as its weakest link.
 
@@ -216,7 +223,9 @@ on the resize step, even though each image will still take a full second to roll
 through this hypothetical processing pipeline. 
 
 Tuning the amount of parallelism at each step is a bit of an art, and
-does require a bit of trial and error. Fortunately, by using the `watch()` tool,
+does require a bit of trial and error. Fortunately, by using the `watch()k10temp-pci-00c3
+Adapter: PCI adapter
+` tool,
 it is easy to see in realtime how data is flowing throughout the computational
 graph, where additional parallel processes should be added, and where 
 existing ones are unnecessary.
@@ -311,9 +320,8 @@ Cross Cutting Concerns
 *In aspect-oriented software development, cross-cutting 
 concerns are aspects of a program that affect other concerns. These concerns 
 often cannot be cleanly decomposed from the rest of the system in both the 
-design and implementation, and can result in either scattering 
-(code duplication), tangling (significant dependencies between systems), 
-or both.* - Wikipeda
+design and implementation, and can result in either scattering (code duplication), 
+tangling (significant dependencies between systems), or both.* - Wikipeda
 
 ### .meta
 
@@ -490,6 +498,8 @@ Many common operations have been included within the mpyx module and may
 be imported directly by name.
 
 
+### Common Operations
+
 ```python
 
 Const(item, limit = None)   
@@ -517,16 +527,82 @@ Print(prefix = None)
 Stamp(pre = "Processing item")
 "A simple debug counter to to track items in the workflow"
 
-Read(filename, mode='r')
+Read(filepath, mode='r')
 "Read a file line-by-line"
 
-Write(filename, mode='w'):
+Write(filepath, mode='w'):
 "Write out to a file. Up to you to add new-lines"
 
 ```
 
 In addition, there are some work-in-progress extensions that you may find useful.
 
+### Data
+
+In practice, when working with large data (e.g. 4k video frames), transfering
+information between processes using mutliprocessing queues can become a 
+throughput bottleneck. To overcome this, a `Data` sled can be used. Instead of
+transferring the data through the queue, an instance of `Data` will transparently 
+write a temporary file to /tmp and simply pass the filename through the queue, 
+along with properties that were declared on `self`. 
+
+This can improve throughput as much as 2-3x when moving large datasets through a 
+processing pipeline, especially if /tmp is mounted using tmpfs (ramdisk). One
+gotcha however is that the `.clean()` method must be called when done with a
+instance of `Data` or else you may experience out of memory errors.
+
+
+```python
+
+from mpyx import EZ, F, Data
+
+"""
+API (of instances of Data):
+    Data.store("key", value)  # Store data to temp file
+    Data.load("key")          # Load from temp file
+    Data.clean()              # remove temp files.
+"""
+
+# Example:
+
+class Frame(Data):
+    def __init__(self, number):
+        self.number = number
+
+class GetFrames(F):
+    def setup(self, video_file):
+        num = 0
+        for f in some_load_video_function(video_file):
+            num += 1
+            frame = Frame(num) 
+            frame.store("frame", f) # writes out temp file
+
+class ProcFrame(F):
+    def do(self, frame):
+        f = frame.load("frame") # load from temp file
+        # ... do something with the frame data
+        frame.store("frame", f) # update temp file        
+        self.put(f)
+
+for frame in EZ(GetFrames(video_file), ProcFrame()).items():
+    processed_frame = frame.load("frame") # load updated temp file
+    print("processed frame", frame.number)
+    imshow(processed_frame)
+    frame.clean() 
+
+```
+
+
+
+
+### Video
+
+This module is rather crude, but is effective at wrapping FFmpeg for the purposes 
+of all combinations of file->file, file->stream, stream->file, and stream->stream 
+transcoding, which many other wrappers of FFmpeg seem to lack. 
+
+This extension does not yet support automatic detection of frame shape, so for stream
+applications frame shape must be user-supplied.
 
 ```python
 
