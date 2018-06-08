@@ -609,10 +609,13 @@ applications frame shape must be user-supplied.
 
 from mpyx.Video import FFmpeg
 
-FFmpeg(input, input_opts, output, output_opts, global_opts, verbose=False)
-"Opens ffmpeg for reading/writing or streaming."
-"If a shape (e.g. (800, 600, 3) )" is provided for input and/or output,"
-"then it will stream through pipes, otherwise it will read/write to file."
+# FFmpeg(input, input_opts, output, output_opts, global_opts, verbose=False)
+
+"""
+Opens ffmpeg for reading/writing or streaming.
+If a shape (e.g. (800, 600, 3) )" is provided for input and/or output,
+then it will stream through pipes, otherwise it will read/write to file.
+"""
 
 
 #Example
