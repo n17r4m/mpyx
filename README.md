@@ -552,6 +552,8 @@ processing pipeline, especially if /tmp is mounted using tmpfs (ramdisk). One
 gotcha however is that the `.clean()` method must be called when done with a
 instance of `Data` or else you may experience out of memory errors.
 
+Internally, numpy.save and numpy.load are used. Corner cases such as bifurcating
+when performing broadcast pipe-lining are handled correctly.
 
 ```python
 
@@ -622,8 +624,8 @@ then it will stream through pipes, otherwise it will read/write to file.
 
 EZ(
     FFmpeg("somefile.avi", "", (1920, 1080, 3), "", "", False),
-    As(4, ProcessVidFrame),
-    Displayer()
+    As(4, FancyProcessVidFrame),
+    FFmpeg((1920, 1080, 3), "", "outfile.avi", "", "", False)
 ).start()
 
 
