@@ -1,4 +1,5 @@
-Copyright (c) 2018, Martin Humphreys, Kevin Gordon
+Copyright (c) 2018, Martin Humphreys, Kevin Gordon.
+
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
