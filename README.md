@@ -5,6 +5,8 @@ mpyx
 A python library for embarrassingly easy parallelism
 ----------------------------------------------------
 
+Note: Not wildy used, kinda beta, probably over sensationalized.
+
 The number of CPU cores in modern computers is increasing at a substantial rate.
 For example, a high end server or workstation may now have up to 64 physical cores,
 or up to 128 available threads!
