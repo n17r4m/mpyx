@@ -120,9 +120,6 @@ For a single long running task, this built in API is often sufficient, however
 it very quickly becomes difficult and unwieldy to orchestrate complex 
 workflows.
 
-k10temp-pci-00c3
-Adapter: PCI adapter
-
 Introducing mpyx
 ----------------
 
@@ -179,17 +176,21 @@ a bucket brigade, passing buckets along between the pond and the fire.
 `EZ` is a wrapper for an internal class called `Indurate` (a latin word
 meaning to strengthen, or harden, or make firm). The details of `Indurate` are
 relatively unimportant, but what it does at a high level is set up a sequence
-of `multiprocessing.JoinableQueue` between each part of your workflow.
+of `multiprocessing.JoinableQueue`s between each part of your workflow.
 
-There is a caveat however; suppose that most of the above image processingk10temp-pci-00c3
-Adapter: PCI adapter
- task 
-is very quick, but resizing the image takes much longer than the other parts. 
-As they say, a chain is only as strong as its weakest link.
+There is a caveat however; suppose that most of the above image processing task
+is very quick, but resizing the image takes much longer than the other
+parts. As they say, a chain is only as strong as its weakest link.
 
-To resolve this, `EZ` is able to recieve arbitrary nested data structures
-that can represent virtually any combination of sequential, parallel, or 
-broadcast/split data pipelines.
+Manual tuning is required.
+
+Pull requests that add automated process number scaling are welcomed.
+Assuming this lib gets any traction, the next big TODO is parallizing
+optimally.
+
+To resolve this for now, `EZ` is able to recieve arbitrary nested data
+structures that can represent virtually any combination of sequential,
+parallel, or broadcast/split data pipelines.
 
 `[]` - lists represent sequential operations
 
