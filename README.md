@@ -5,7 +5,7 @@ mpyx
 A python library for embarrassingly easy parallelism
 ----------------------------------------------------
 
-Note: Not wildy used, kinda beta, probably over sensationalized.
+Note: Not widely used, kinda beta, probably over sensationalized.
 
 The number of CPU cores in modern computers is increasing at a substantial rate.
 For example, a high end server or workstation may now have up to 64 physical cores,
@@ -55,7 +55,7 @@ also has ~~first class~~ support available in python starting with version 3.5.
 Ultimately, async code is still single-threaded, however by having multiple
 tasks sitting on an "event loop," when a particular task (such as reading a
 file, or fetching a resource from the internet) is blocked while performing IO,
-other tasks may continue to run uninturrupted.
+other tasks may continue to run uninterrupted.
 
 ### Threads
 
@@ -68,7 +68,7 @@ however it usually prevents work in python code operating concurrently.
 
 That said, many operations, such as most calls to a foreign function interface 
 (e.g. most numpy functions) will allow the GIL to be released, so threads *can* 
-improve performance beyond what asynchronous concurrancy can provide (which will
+improve performance beyond what asynchronous concurrency can provide (which will
 only concurrently run tasks which wait on blocking syscalls). 
 
 ### Multiprocessing
@@ -76,7 +76,7 @@ only concurrently run tasks which wait on blocking syscalls).
 Process based parallelism is the granddaddy of concurrency and is the only way
 to achieve real simultaneous utilization of multiple CPU cores in python. 
 When using multiple processes, the parent process is forked into child processes 
-which each have their own independant Global Interpreter Lock. Further, each 
+which each have their own independent Global Interpreter Lock. Further, each 
 child process is effectively isolated from each other, so there is no concerns 
 about ensuring memory safety, however care must still be taken when accessing 
 other shared resources, such as files or databases.
@@ -123,7 +123,7 @@ workflows.
 Introducing mpyx
 ----------------
 
-The easiest way to start taking advantage of mpyx is to parallelise a sequence
+The easiest way to start taking advantage of mpyx is to parallelize a sequence
 of functions. Suppose you have a simple image processing pipeline that looks 
 something like:
 
@@ -185,10 +185,10 @@ parts. As they say, a chain is only as strong as its weakest link.
 Manual tuning is required.
 
 Pull requests that add automated process number scaling are welcomed.
-Assuming this lib gets any traction, the next big TODO is parallizing
+Assuming this lib gets any traction, the next big TODO is paralleling
 optimally.
 
-To resolve this for now, `EZ` is able to recieve arbitrary nested data
+To resolve this for now, `EZ` is able to receive arbitrary nested data
 structures that can represent virtually any combination of sequential,
 parallel, or broadcast/split data pipelines.
 
@@ -199,7 +199,7 @@ parallel, or broadcast/split data pipelines.
 `{}` - sets represent broadcasted/split operations
 
 Alternatively, (and required in some special circumstances where nested 
-structures cannot be hashed), there are class wrappers that provide equivilant 
+structures cannot be hashed), there are class wrappers that provide equivalent 
 functionality, and can be intermixed with the above syntax.
 
 ```python
@@ -227,10 +227,8 @@ on the resize step, even though each image will still take a full second to roll
 through this hypothetical processing pipeline. 
 
 Tuning the amount of parallelism at each step is a bit of an art, and
-does require a bit of trial and error. Fortunately, by using the `watch()k10temp-pci-00c3
-Adapter: PCI adapter
-` tool,
-it is easy to see in realtime how data is flowing throughout the computational
+does require a bit of trial and error. Fortunately, by using the `watch()` tool,
+it is easy to see in real time how data is flowing throughout the computational
 graph, where additional parallel processes should be added, and where 
 existing ones are unnecessary.
 
@@ -243,7 +241,7 @@ instances**, although a small amount of overhead is added by doing this.
 
 Although it is possible to use vanilla functions in a mpyx pipeline, `F` is the 
 base class that can be extended from to provide advanced functionality during
-the lifecycle of a child process. It provides useful hooks and methods to 
+the life cycle of a child process. It provides useful hooks and methods to 
 accomplish most needs:
 
 ```python
@@ -278,7 +276,7 @@ class YourTask(F):
         pass
 ```
 
-Most complicated tasks will benifit from being declared as a subclass of `F`,
+Most complicated tasks will benefit from being declared as a subclass of `F`,
 however as mentioned previously, if your task is a simple mapping of 
 `foo(x) -> y`, you may use `foo` as a function in its vanilla state. 
 
@@ -330,13 +328,13 @@ tangling (significant dependencies between systems), or both.* - Wikipeda
 ### .meta
 
 Very often there are problems isolating each process to be completely 
-independant from each other. In the image pipeline example, it would be useful
+independent from each other. In the image pipeline example, it would be useful
 for the last child process `SaveTo` to know what the original file name was
 from `ImgFiles` so that it could name the file correctly in the destination
 folder.
 
 Instances of `F` provide a special member property `meta` which is a `dict`
-that will propogate through the `EZ` pipeline and are distinctly attached to a 
+that will propagate through the `EZ` pipeline and are distinctly attached to a 
 specific item. This is very useful when attaching ancillary information as required. 
 Here are some potential concrete implementations of `ImgFiles` and `SaveTo` 
 using `meta` to pass along the image filename:
@@ -456,9 +454,9 @@ do_work()
 In addition to `meta` and `xcut` there is also the option to manually create
 instances of Queues, Events, and Pipes and supply them as arguments 
 to your instantiated `F` objects during the `initialize` portion of the process 
-lifecycle. 
+life cycle. 
 
-For convinience, the following shortcuts are available on the F class object:
+For convenience, the following shortcuts are available on the F class object:
 
 | Alias       | Maps to                         |
 | ----------- | --------------------------------|
@@ -475,7 +473,7 @@ As and By
 
 `EZ(By(4, Task, arg1, arg2, ...))`
 
-For easy instantiation of many parallel processes two auxilery functions 
+For easy instantiation of many parallel processes two auxiliary functions 
 are provided by mpyx. `As` will instantiate several instances of a subclass
 of `F` in *parallel* mode, and `By` will do the same, but in *Broadcast* mode.
 
@@ -526,7 +524,7 @@ Zip(*fns)
 "into a zipped array"
 
 Print(prefix = None)
-"A simple pass-through that prints out what it recieves"
+"A simple pass-through that prints out what it receives"
         
 Stamp(pre = "Processing item")
 "A simple debug counter to to track items in the workflow"
@@ -543,14 +541,14 @@ In addition, there are some work-in-progress extensions that you may find useful
 
 ### Data
 
-In practice, when working with large data (e.g. 4k video frames), transfering
-information between processes using mutliprocessing queues can become a 
+In practice, when working with large data (e.g. 4k video frames), transferring
+information between processes using multiprocessing queues can become a 
 throughput bottleneck. To overcome this, a `Data` sled can be used. Instead of
 transferring the data through the queue, an instance of `Data` will transparently 
 write a temporary file to /tmp and simply pass the filename through the queue, 
 along with properties that were declared on `self`. 
 
-This can improve throughput as much as 2-3x when moving large datasets through a 
+This can improve throughput as much as 2-3x when moving large data sets through a 
 processing pipeline, especially if /tmp is mounted using tmpfs (ramdisk). One
 gotcha however is that the `.clean()` method must be called when done with a
 instance of `Data` or else you may experience out of memory errors.
@@ -757,7 +755,7 @@ a concrete list of results.
 ##### e.watch()
 
 Starts a watchdog process that prints to stdout the current queue sizes. Useful 
-for determining where bottlenecks are located (and where you should add more parralelism :)
+for determining where bottlenecks are located (and where you should add more parallelism :)
 
 ##### e.unwatch()
 
@@ -784,7 +782,7 @@ Internals
 
 Every instance of `F` has the following important properties which manage how it
 behaves relative to its location in the computational graph. These properties
-should be considerd as private, however they are available for inspection if
+should be considered as private, however they are available for inspection if
 required.
 
 `.inputs` - An array that holds references to Queues that could emit items
@@ -806,12 +804,12 @@ inputs and outputs into the worker processes, shared instances of the
 `.inputs` and `.outputs` arrays may be created. Specifically, the `Indurate`
 instances and the `F` instances may sometimes share a reference to the 
 *same* array. As a consequence, reassigning a worker processes' `.inputs` or 
-`.outputs` will probably cause unwanted and undefined behaviour.
+`.outputs` will probably cause unwanted and undefined behavior.
 
 
 ### F Lifecycle
 
-For reference, the complete lifecycle of a `F` instance is as follows: 
+For reference, the complete life cycle of a `F` instance is as follows: 
 
 Methods that are executed in the parents process with #P and methods executed
 within the child with #C
