@@ -787,8 +787,13 @@ class SequenceEnd(F):
 
 class Data:
 
+    def tmp_dir(self):
+        return "/tmp"
+
     def save_gen_fname(self, key):
-        return "/tmp/mpyx_datagram_{}_{}.npy".format(key, str(uuid4()))
+        return os.path.join(
+            self.tmp_dir(), "mpyx_datagram_{}_{}.npy".format(key, str(uuid4()))
+        )
 
     def save(self, key, data):
 
