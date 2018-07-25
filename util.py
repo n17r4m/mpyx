@@ -1,4 +1,4 @@
-from F import F, SequenceStart, SequenceEnd
+from .F import F, SequenceStart, SequenceEnd
 import random
 from queue import PriorityQueue
 
