@@ -1,4 +1,4 @@
-from mpyx.F import F
+from mpyx import F
 
 import numpy as np
 import subprocess as sp
