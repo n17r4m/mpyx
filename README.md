@@ -7,6 +7,8 @@ A python library for embarrassingly easy parallelism
 
 Note: Not widely used, kinda beta, probably over sensationalized.
 
+This software is still most definitely beta, and feedback is highly welcomed.
+
 The number of CPU cores in modern computers is increasing at a substantial rate.
 For example, a high end server or workstation may now have up to 64 physical cores,
 or up to 128 available threads!
@@ -22,6 +24,7 @@ often be achieved with minimal code modification.
 ### Table of Contents
 
 - [Background](#background)
+- [Installing](#installing)
 - [Introducing mpyx](#introducing-mpyx)
   * [EZ](#ez)
   * [F](#f)
@@ -119,6 +122,16 @@ Worker: 4
 For a single long running task, this built in API is often sufficient, however
 it very quickly becomes difficult and unwieldy to orchestrate complex 
 workflows.
+
+Installing
+----------
+
+At present, We do a few fancy tricks that makes mpyx only suitable on UNIX-like systems.
+
+  1) Clone this repo into your project
+  2) Install Dependancies
+     pip install --user setproctitle
+
 
 Introducing mpyx
 ----------------
