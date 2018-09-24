@@ -594,6 +594,7 @@ class GetFrames(F):
             num += 1
             frame = Frame(num) 
             frame.store("frame", f) # writes out temp file
+            self.put(frame)
 
 class ProcFrame(F):
     def do(self, frame):
