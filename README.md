@@ -130,6 +130,7 @@ At present, We do a few fancy tricks that makes mpyx only suitable on UNIX-like 
 
   1) Clone this repo into your project
   2) Install Dependancies
+
      pip install --user setproctitle
 
 
