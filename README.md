@@ -132,6 +132,7 @@ At present, We do a few fancy tricks that makes mpyx only suitable on UNIX-like 
   2) Install Dependancies
 
      pip install --user setproctitle
+     pip install --user numpy
 
 
 Introducing mpyx
