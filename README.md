@@ -364,7 +364,7 @@ class ImgFiles(F):
     def setup(self, dir):
         for p in Path(dir).glob('*.jpg'):
             self.meta["fname"] = p.name
-            self.put(p)
+            self.put(imread(p))
         self.stop()
 
 class SaveTo(F):
